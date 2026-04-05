@@ -1,0 +1,33 @@
+# Harness Navigation System Configuration
+
+display:
+  width: 8
+  height: 8
+  cell_size: 60       # Pixels per LED cell (larger = easier to see)
+  refresh_rate_hz: 30
+
+led_matrix:
+  gpio_pin: "P8_11"
+  brightness: 128
+
+switch:
+  gpio_pin: "P9_12"
+  debounce_ms: 50
+
+buzzer:
+  pwm_pin: "P9_14"
+  success_freq: 2000
+  success_duration_ms: 200
+  error_freq: 500
+  error_duration_ms: 500
+
+paths:
+  patterns_dir: "./data"
+
+colors:
+  off: "#333333"        # LED off state
+  pending: "#FFFF00"    # Yellow - needs testing
+  active: "#00AAFF"     # Cyan - currently selected
+  verified: "#00FF00"   # Green - passed
+  error: "#FF0000"      # Red - wrong connection
+  background: "#1A1A1A" # Dark gray

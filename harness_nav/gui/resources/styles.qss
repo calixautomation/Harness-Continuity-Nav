@@ -1,0 +1,218 @@
+/* Harness Navigation System - Qt Style Sheet */
+
+/* Main Window */
+QMainWindow {
+    background-color: #2D2D2D;
+}
+
+/* Group Boxes */
+QGroupBox {
+    color: #FFFFFF;
+    font-weight: bold;
+    border: 1px solid #555555;
+    border-radius: 5px;
+    margin-top: 10px;
+    padding-top: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 5px;
+}
+
+/* Labels */
+QLabel {
+    color: #CCCCCC;
+}
+
+/* Combo Boxes */
+QComboBox {
+    background-color: #404040;
+    color: #FFFFFF;
+    border: 1px solid #555555;
+    border-radius: 3px;
+    padding: 5px;
+    min-height: 25px;
+}
+
+QComboBox:hover {
+    border: 1px solid #777777;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 20px;
+}
+
+QComboBox::down-arrow {
+    width: 12px;
+    height: 12px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #404040;
+    color: #FFFFFF;
+    selection-background-color: #0078D7;
+}
+
+/* Push Buttons */
+QPushButton {
+    background-color: #404040;
+    color: #FFFFFF;
+    border: 1px solid #555555;
+    border-radius: 3px;
+    padding: 8px 15px;
+    min-height: 20px;
+}
+
+QPushButton:hover {
+    background-color: #505050;
+}
+
+QPushButton:pressed {
+    background-color: #353535;
+}
+
+QPushButton:disabled {
+    background-color: #333333;
+    color: #666666;
+}
+
+/* Start Button (Green) */
+QPushButton#startButton {
+    background-color: #2E7D32;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    border-radius: 5px;
+}
+
+QPushButton#startButton:hover {
+    background-color: #388E3C;
+}
+
+/* Stop Button (Red) */
+QPushButton#stopButton {
+    background-color: #C62828;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    border-radius: 5px;
+}
+
+QPushButton#stopButton:hover {
+    background-color: #D32F2F;
+}
+
+/* Radio Buttons */
+QRadioButton {
+    color: #CCCCCC;
+    spacing: 8px;
+}
+
+QRadioButton::indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    border: 2px solid #555555;
+    background-color: #404040;
+}
+
+QRadioButton::indicator:checked {
+    background-color: #0078D7;
+    border-color: #0078D7;
+}
+
+QRadioButton::indicator:hover {
+    border-color: #777777;
+}
+
+/* Progress Bar */
+QProgressBar {
+    border: 1px solid #555555;
+    border-radius: 3px;
+    text-align: center;
+    color: #FFFFFF;
+    background-color: #404040;
+    min-height: 20px;
+}
+
+QProgressBar::chunk {
+    background-color: #4CAF50;
+    border-radius: 2px;
+}
+
+/* Status Bar */
+QStatusBar {
+    background-color: #1A1A1A;
+    color: #AAAAAA;
+    border-top: 1px solid #333333;
+}
+
+/* Scroll Bars */
+QScrollBar:vertical {
+    background-color: #2D2D2D;
+    width: 12px;
+    margin: 0;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #555555;
+    min-height: 30px;
+    border-radius: 6px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #666666;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+QScrollBar:horizontal {
+    background-color: #2D2D2D;
+    height: 12px;
+    margin: 0;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: #555555;
+    min-width: 30px;
+    border-radius: 6px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background-color: #666666;
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0;
+}
+
+/* Splitter */
+QSplitter::handle {
+    background-color: #404040;
+}
+
+QSplitter::handle:horizontal {
+    width: 4px;
+}
+
+QSplitter::handle:vertical {
+    height: 4px;
+}
+
+/* Tooltips */
+QToolTip {
+    background-color: #404040;
+    color: #FFFFFF;
+    border: 1px solid #555555;
+    padding: 4px;
+}
+
+/* Frame separator */
+QFrame[frameShape="4"] {
+    color: #555555;
+}

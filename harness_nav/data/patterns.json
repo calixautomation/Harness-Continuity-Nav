@@ -1,0 +1,55 @@
+{
+    "patterns": [
+        {
+            "id": "pattern_1",
+            "name": "Pattern 1",
+            "description": "LEDs 3, 4, 8",
+            "leds": [
+                10,
+                11,
+                13
+            ]
+        },
+        {
+            "id": "pattern_4",
+            "name": "Pattern 4",
+            "description": "Corner LEDs",
+            "leds": [
+                1,
+                8,
+                57,
+                64
+            ]
+        },
+        {
+            "id": "pattern_5",
+            "name": "Pattern 5",
+            "description": "Diagonal",
+            "leds": [
+                1,
+                10,
+                19,
+                28,
+                37,
+                46,
+                55,
+                64
+            ]
+        },
+        {
+            "id": "pattern_6",
+            "name": "Pattern 6",
+            "description": "First Row",
+            "leds": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+            ]
+        }
+    ]
+}

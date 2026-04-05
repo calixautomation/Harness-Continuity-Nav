@@ -1,0 +1,16 @@
+# BeagleBone Black Pin Assignments
+# Reference: https://beagleboard.org/Support/bone101
+
+# PRU output for WS2812 LED data
+led_data: "P8_11"
+
+# GPIO input with internal pull-up for limit switch
+limit_switch: "P9_12"
+
+# PWM output for piezo buzzer
+buzzer_pwm: "P9_14"
+
+# Pin configuration notes:
+# P8_11 - GPIO1_13, suitable for PRU output
+# P9_12 - GPIO1_28, general purpose GPIO with pull-up
+# P9_14 - EHRPWM1A, hardware PWM capable
