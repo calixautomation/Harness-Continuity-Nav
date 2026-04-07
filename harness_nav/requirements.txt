@@ -10,6 +10,12 @@ PyYAML>=6.0
 # Uncomment when deploying to BeagleBone:
 # Adafruit-BBIO>=1.2.0
 
+# Raspberry Pi hardware support
+RPi.GPIO>=0.7.1
+luma.led-matrix>=1.7.0
+spidev>=3.5
+smbus2>=0.4.3
+
 # Development & Testing
 pytest>=7.0.0
 pytest-qt>=4.0.0
