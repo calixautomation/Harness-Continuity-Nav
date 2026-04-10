@@ -13,6 +13,22 @@ cd HarnessNav
 python harness_nav/scripts/run_desktop.py
 ```
 
+### Raspberry Pi Hardware Mirror
+
+For Raspberry Pi deployments that drive external LEDs through MCP23017 expanders, run:
+
+```bash
+python raspberry_program.py --hardware-mode --switch-mode increment
+```
+
+The default expander map lives in [harness_nav/config/mcp23017_layout.json](harness_nav/config/mcp23017_layout.json). Add a new MCP23017 by adding another entry to that file with its I2C address and 16 output mappings.
+
+If you only want to validate the switch/LED behavior without the GUI, use:
+
+```bash
+python mcp23017_limit_switch_test.py --limit-switch-gpio 14
+```
+
 ## How It Works
 
 ```
@@ -107,6 +123,23 @@ Use the built-in Pattern Editor (click "New Pattern") or edit `harness_nav/data/
 49  50  51  52  53  54  55  56
 57  58  59  60  61  62  63  64
 ```
+
+### Modular MCP23017 Mapping
+
+The Raspberry Pi hardware bridge treats the 64 GUI LEDs as logical LED numbers and maps them across one or more MCP23017 expanders.
+
+Default layout:
+- MCP23017 at `0x20` drives LEDs 1-16
+- MCP23017 at `0x21` drives LEDs 17-32
+- MCP23017 at `0x22` drives LEDs 33-48
+- MCP23017 at `0x23` drives LEDs 49-64
+
+To change the wiring, edit [harness_nav/config/mcp23017_layout.json](harness_nav/config/mcp23017_layout.json). Each expander entry contains:
+- `address`: I2C address for the chip
+- `active_high`: output polarity for that expander
+- `outputs`: 16-element list mapping output bit 0-15 to logical LED numbers
+
+This keeps the bridge modular so new expanders can be added without changing the rendering logic.
 
 ---
 
