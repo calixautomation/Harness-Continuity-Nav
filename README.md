@@ -44,7 +44,6 @@ What this script does:
 Useful options:
 - `--passes 3` to repeat test loops
 - `--active-low-outputs` if LED wiring is active-LOW
-
 ## How It Works
 
 ```
