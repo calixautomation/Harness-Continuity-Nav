@@ -264,6 +264,14 @@ class MockDualSwitchHandler(DualSwitchHandlerBase):
             logger.debug("MockDualSwitchHandler: simulating verify")
             self._verify_callback()
 
+    def simulate_lock_press(self) -> None:
+        """Backward-compatible alias for simulating a lock press."""
+        self.simulate_lock()
+
+    def simulate_verify_press(self) -> None:
+        """Backward-compatible alias for simulating a verify press."""
+        self.simulate_verify()
+
 
 class DualSwitchHandler(DualSwitchHandlerBase):
     """
@@ -399,6 +407,14 @@ class DualSwitchHandler(DualSwitchHandlerBase):
             self._mock.simulate_verify()
         elif self._verify_callback:
             self._verify_callback()
+
+    def simulate_lock_press(self) -> None:
+        """Backward-compatible alias for simulating a lock press."""
+        self.simulate_lock()
+
+    def simulate_verify_press(self) -> None:
+        """Backward-compatible alias for simulating a verify press."""
+        self.simulate_verify()
 
     def cleanup(self) -> None:
         """Clean up GPIO resources."""
