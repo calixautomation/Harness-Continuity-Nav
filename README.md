@@ -1,3 +1,5 @@
+[![Python application](https://github.com/calixautomation/Harness-Continuity-Nav/actions/workflows/python-app.yml/badge.svg)](https://github.com/calixautomation/Harness-Continuity-Nav/actions/workflows/python-app.yml)
+
 # LED Pattern Tester
 
 A GUI application for testing wire connectivity on an 8x8 LED matrix. Uses a two-stage verification process: lock the wire in the slot, then verify connectivity by touching a metal plate.
