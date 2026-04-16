@@ -23,7 +23,7 @@ from harness_nav.hal.buzzer import BuzzerDriver, MockBuzzerDriver
 from harness_nav.core.patterns import PatternLoader, Pattern
 
 
-def test_led_matrix():
+def run_led_matrix():
     """Test LED matrix initialization and basic operations."""
     print("\n=== Testing LED Matrix (8x8) ===")
 
@@ -58,7 +58,7 @@ def test_led_matrix():
     return True
 
 
-def test_single_switch():
+def run_single_switch():
     """Test single switch handler."""
     print("\n=== Testing Single Switch Handler ===")
 
@@ -86,7 +86,7 @@ def test_single_switch():
     return success
 
 
-def test_dual_switch():
+def run_dual_switch():
     """Test dual switch handler (limit switch + metal plate)."""
     print("\n=== Testing Dual Switch Handler ===")
 
@@ -127,7 +127,7 @@ def test_dual_switch():
     return success
 
 
-def test_buzzer():
+def run_buzzer():
     """Test buzzer driver with lock/verify tones."""
     print("\n=== Testing Buzzer Driver ===")
 
@@ -153,7 +153,7 @@ def test_buzzer():
     return True
 
 
-def test_pattern_loader():
+def run_pattern_loader():
     """Test pattern loading from JSON."""
     print("\n=== Testing Pattern Loader ===")
 
@@ -201,7 +201,7 @@ def test_pattern_loader():
     return True
 
 
-def test_pattern_model():
+def run_pattern_model():
     """Test Pattern model directly."""
     print("\n=== Testing Pattern Model ===")
 
@@ -264,12 +264,12 @@ def main():
     print("=" * 60)
 
     tests = [
-        ("LED Matrix", test_led_matrix),
-        ("Single Switch", test_single_switch),
-        ("Dual Switch", test_dual_switch),
-        ("Buzzer", test_buzzer),
-        ("Pattern Loader", test_pattern_loader),
-        ("Pattern Model", test_pattern_model),
+        ("LED Matrix", run_led_matrix),
+        ("Single Switch", run_single_switch),
+        ("Dual Switch", run_dual_switch),
+        ("Buzzer", run_buzzer),
+        ("Pattern Loader", run_pattern_loader),
+        ("Pattern Model", run_pattern_model),
     ]
 
     results = []

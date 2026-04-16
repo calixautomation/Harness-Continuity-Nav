@@ -26,6 +26,8 @@ class TestCoordinator:
     - Support flexible order testing (user can select any point)
     """
 
+    __test__ = False
+
     # Color constants (24-bit RGB)
     COLOR_PENDING = 0xFFFF00   # Yellow
     COLOR_ACTIVE = 0x0000FF    # Blue

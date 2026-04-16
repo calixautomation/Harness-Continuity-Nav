@@ -2,14 +2,18 @@
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import List, Set, Optional
+from typing import Dict, List, Optional, Set
 
 
 class TestState(Enum):
     """States for the test state machine."""
+    __test__ = False
+
     IDLE = auto()              # No pattern selected
+    HARNESS_SELECTED = auto()  # Harness loaded, no wire type selected
     PATTERN_LOADED = auto()    # Pattern selected, ready to test
     TESTING = auto()           # Test in progress
+    POINT_ACTIVE = auto()      # A specific point is active and awaiting input
     COMPLETE = auto()          # All LEDs verified
     ERROR = auto()             # Wrong connection detected
 
@@ -22,6 +26,116 @@ class LEDStatus(Enum):
     LOCKED = auto()    # Wire locked in slot (limit switch pressed)
     VERIFIED = auto()  # Successfully verified (circuit complete)
     ERROR = auto()     # Wrong connection
+
+
+class PointStatus(Enum):
+    """Status for a point in the coordinator/UI compatibility layer."""
+
+    PENDING = auto()
+    ACTIVE = auto()
+    VERIFIED = auto()
+    ERROR = auto()
+
+
+@dataclass
+class TestPoint:
+    """A single logical test point on the 8x8 grid."""
+
+    __test__ = False
+
+    x: int
+    y: int
+    description: str = ""
+    sequence: int = 0
+    status: PointStatus = PointStatus.PENDING
+
+    def __post_init__(self) -> None:
+        """Validate coordinates."""
+        if not (0 <= self.x < 8 and 0 <= self.y < 8):
+            raise ValueError(f"Coordinates ({self.x}, {self.y}) out of range")
+
+    @property
+    def is_verified(self) -> bool:
+        """Check whether the point has been verified."""
+        return self.status == PointStatus.VERIFIED
+
+    def set_active(self) -> None:
+        """Mark this point as active."""
+        self.status = PointStatus.ACTIVE
+
+    def verify(self) -> None:
+        """Mark this point as verified."""
+        self.status = PointStatus.VERIFIED
+
+    def reset(self) -> None:
+        """Reset this point to pending."""
+        self.status = PointStatus.PENDING
+
+
+@dataclass
+class WirePattern:
+    """Compatibility wrapper representing a named list of test points."""
+
+    wire_type: str
+    points: List[TestPoint]
+    description: str = ""
+
+    def get_pending_points(self) -> List[TestPoint]:
+        """Return pending or active points in sequence order."""
+        return [
+            point for point in sorted(self.points, key=lambda p: p.sequence)
+            if point.status in (PointStatus.PENDING, PointStatus.ACTIVE)
+        ]
+
+    def get_point_at(self, x: int, y: int) -> Optional[TestPoint]:
+        """Return the point at the given coordinates if present."""
+        for point in self.points:
+            if point.x == x and point.y == y:
+                return point
+        return None
+
+    def reset_all(self) -> None:
+        """Reset all points to pending."""
+        for point in self.points:
+            point.reset()
+
+    @property
+    def total_points(self) -> int:
+        """Total points in the pattern."""
+        return len(self.points)
+
+    @property
+    def verified_count(self) -> int:
+        """Number of verified points."""
+        return sum(1 for point in self.points if point.is_verified)
+
+    @property
+    def is_complete(self) -> bool:
+        """Check whether every point has been verified."""
+        return self.total_points > 0 and self.verified_count == self.total_points
+
+
+@dataclass
+class Harness:
+    """Compatibility wrapper for a collection of wire patterns."""
+
+    name: str
+    patterns: List[WirePattern] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        """Build a lookup table for patterns by wire type."""
+        self._patterns_by_type: Dict[str, WirePattern] = {
+            pattern.wire_type: pattern for pattern in self.patterns
+        }
+
+    @property
+    def wire_types(self) -> List[str]:
+        """Return available wire types."""
+        return list(self._patterns_by_type.keys())
+
+    def get_pattern(self, wire_type: str) -> Optional[WirePattern]:
+        """Return the pattern for a specific wire type."""
+        return self._patterns_by_type.get(wire_type)
 
 
 @dataclass
@@ -154,6 +268,11 @@ class Pattern:
     def verified_leds(self) -> Set[int]:
         """Get set of verified LED numbers."""
         return self._verified_leds.copy()
+
+    @property
+    def verified_count(self) -> int:
+        """Get number of verified LEDs."""
+        return len(self._verified_leds)
 
     @property
     def is_complete(self) -> bool:
