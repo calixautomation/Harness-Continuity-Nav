@@ -29,6 +29,24 @@ If you only want to validate the switch/LED behavior without the GUI, use:
 python mcp23017_limit_switch_test.py --limit-switch-gpio 14
 ```
 
+### Standalone Two-Demux I2C Test (Raspberry Pi)
+
+To test two I2C demux boards (TCA9548A) with LEDs connected through MCP23017 expanders, run:
+
+```bash
+python two_i2c_demux_led_test.py --demux-addresses 0x70,0x71 --mcp-addresses 0x20
+```
+
+What this script does:
+- selects each demux and channel
+- probes MCP23017 devices on that channel
+- runs a walking LED pattern across all 16 MCP23017 outputs
+
+Useful options:
+- `--channels 0,1,2` to limit tested channels
+- `--passes 3` to repeat test loops
+- `--active-low-outputs` if LED wiring is active-LOW
+
 ## How It Works
 
 ```
