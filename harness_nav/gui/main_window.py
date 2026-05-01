@@ -59,6 +59,8 @@ class MainWindow(QMainWindow):
 
         # Hardware mode: hide test buttons, use GPIO triggers
         self._hardware_mode = False
+        # Live matrix mode: auto-start test when a pattern is selected.
+        self._live_matrix_mode = False
 
         # Callbacks
         self._on_start_test = None
@@ -430,6 +432,10 @@ class MainWindow(QMainWindow):
             self._status_bar.showMessage(
                 f"Pattern loaded: {len(self._current_pattern.leds)} LEDs to test"
             )
+            self.pattern_selected.emit(pattern_id)
+
+            if self._live_matrix_mode and self._state == TestState.PATTERN_LOADED:
+                self._start_test()
 
     def _on_led_clicked(self, led_num: int) -> None:
         """Handle LED button click."""
@@ -670,6 +676,118 @@ class MainWindow(QMainWindow):
             self._step_label.setText("Hardware mode: waiting for switch inputs")
         else:
             self._step_label.setText("Step: Select pattern and start test")
+
+    def set_live_matrix_mode(self, enabled: bool) -> None:
+        """
+        Enable sequential live mode for external switch-driven progression.
+
+        In live mode:
+        - Pattern selection auto-starts test
+        - Start button is hidden
+        - Hardware mode is enabled
+        """
+        self._live_matrix_mode = enabled
+        self._start_btn.setVisible(not enabled)
+        self.set_hardware_mode(enabled)
+
+        if enabled and self._current_pattern and self._state == TestState.PATTERN_LOADED:
+            self._start_test()
+
+    def trigger_increment_led(self) -> bool:
+        """
+        Advance one LED step from hardware limit switch.
+
+        Behavior:
+        - Current active LED blinks until switch press
+        - On press, current LED is marked done and next LED starts blinking
+        """
+        if not self._current_pattern:
+            return False
+
+        if self._state == TestState.PATTERN_LOADED and self._live_matrix_mode:
+            self._start_test()
+
+        if self._state != TestState.TESTING:
+            return False
+
+        active_led = self._current_pattern.active_led
+        if active_led == 0:
+            active_led = self._current_pattern.auto_select_next() or 0
+            if active_led == 0:
+                return False
+
+        if not self._current_pattern.is_active_led_locked():
+            self._current_pattern.lock_active_led()
+
+        if not self._current_pattern.verify_active_led():
+            return False
+
+        self._grid_widget.refresh_display()
+        verified, total = self._current_pattern.progress
+        self._update_progress(verified, total)
+
+        if self._current_pattern.is_complete:
+            self._state = TestState.COMPLETE
+            self._update_start_button_style(False)
+            self._pattern_combo.setEnabled(True)
+            self._lock_btn.setEnabled(False)
+            self._verify_btn.setEnabled(False)
+            self._current_led_label.setText("COMPLETE!")
+            self._current_led_label.setStyleSheet("color: #00FF00;")
+            self._step_label.setText("All wires verified successfully!")
+            self._step_label.setStyleSheet("color: #00FF00; font-weight: bold;")
+            self._grid_widget.stop_blinking()
+            self._status_bar.showMessage("Test COMPLETE! All LEDs verified.")
+        else:
+            next_led = self._current_pattern.auto_select_next()
+            if next_led:
+                self._grid_widget.refresh_display()
+                self._current_led_label.setText(f"LED {next_led}")
+                self._current_led_label.setStyleSheet("color: #00AAFF;")
+                self._step_label.setText("Press limit switch to advance")
+                self._step_label.setStyleSheet("color: #FF8800; font-weight: bold;")
+                self._status_bar.showMessage(
+                    f"LED {active_led} completed. LED {next_led} is now active"
+                )
+
+        if self._on_lock_wire:
+            self._on_lock_wire(active_led)
+        if self._on_verify_connection:
+            self._on_verify_connection(active_led)
+
+        return True
+
+    def trigger_toggle_led(self) -> bool:
+        """Compatibility toggle action for older switch workflows."""
+        if not self._current_pattern or self._state != TestState.TESTING:
+            return False
+
+        active_led = self._current_pattern.active_led
+        if active_led == 0:
+            active_led = self._current_pattern.auto_select_next() or 0
+            if active_led == 0:
+                return False
+
+        verified_set = getattr(self._current_pattern, "_verified_leds", None)
+        if not isinstance(verified_set, set):
+            return False
+
+        if active_led in verified_set:
+            verified_set.discard(active_led)
+            led_on = False
+        else:
+            verified_set.clear()
+            verified_set.add(active_led)
+            led_on = True
+
+        self._grid_widget.refresh_display()
+        verified, total = self._current_pattern.progress
+        self._update_progress(verified, total)
+        self._current_led_label.setText(f"LED {active_led}")
+        self._step_label.setText("Toggle mode active")
+        self._step_label.setStyleSheet("color: #00AAFF; font-weight: bold;")
+        self._status_bar.showMessage(f"LED {active_led} {'ON' if led_on else 'OFF'}")
+        return True
 
     def trigger_lock(self) -> bool:
         """

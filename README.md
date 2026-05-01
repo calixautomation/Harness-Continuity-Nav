@@ -15,6 +15,54 @@ cd HarnessNav
 python harness_nav/scripts/run_desktop.py
 ```
 
+### Raspberry Pi Hardware Mirror
+
+For Raspberry Pi deployments that drive external LEDs through MCP23017 expanders, run:
+
+```bash
+python raspberry_program.py --hardware-mode --switch-mode increment
+```
+
+The default expander map lives in [harness_nav/config/mcp23017_layout.json](harness_nav/config/mcp23017_layout.json). Add a new MCP23017 by adding another entry to that file with its I2C address and 16 output mappings.
+
+If you only want to validate the switch/LED behavior without the GUI, use:
+
+```bash
+python mcp23017_limit_switch_test.py --limit-switch-gpio 14
+```
+### Standalone MCP23017 I2C Test (Raspberry Pi)
+
+To test multiple MCP23017 expanders on the same I2C bus (no demux), run:
+
+```bash
+python two_i2c_demux_led_test.py --mcp-addresses 0x20,0x21,0x22,0x23
+```
+
+What this script does:
+- probes each configured MCP23017 address on the I2C bus
+- runs a walking LED pattern across each device's 16 outputs, then sets all-on briefly and clears
+
+Useful options:
+- `--passes 3` to repeat test loops
+- `--active-low-outputs` if LED wiring is active-LOW
+### Standalone Two-Demux I2C Test (Raspberry Pi)
+
+To test two I2C demux boards (TCA9548A) with LEDs connected through MCP23017 expanders, run:
+
+```bash
+python two_i2c_demux_led_test.py --demux-addresses 0x70,0x71 --mcp-addresses 0x20
+```
+
+What this script does:
+- selects each demux and channel
+- probes MCP23017 devices on that channel
+- runs a walking LED pattern across all 16 MCP23017 outputs
+
+Useful options:
+- `--channels 0,1,2` to limit tested channels
+- `--passes 3` to repeat test loops
+- `--active-low-outputs` if LED wiring is active-LOW
+
 ## How It Works
 
 ```
@@ -90,9 +138,24 @@ Use the built-in Pattern Editor (click "New Pattern") or edit `harness_nav/data/
         {
             "id": "corners",
             "name": "Corner LEDs",
-            "description": "All four corners",
+        ### Standalone Two-Demux I2C Test (Raspberry Pi)
+
+        To test two I2C demux boards (TCA9548A) with LEDs connected through MCP23017 expanders, run:
+
+        ```bash
+        python two_i2c_demux_led_test.py --demux-addresses 0x70,0x71 --mcp-addresses 0x20
+        ```
+
+        What this script does:
+        - selects each demux and channel
+        - probes MCP23017 devices on that channel
+        - runs a walking LED pattern across all 16 MCP23017 outputs
+
+        Useful options:
+        - `--channels 0,1,2` to limit tested channels
+        - `--passes 3` to repeat test loops
+        - `--active-low-outputs` if LED wiring is active-LOW
             "leds": [1, 8, 57, 64]
-        }
     ]
 }
 ```
@@ -109,6 +172,23 @@ Use the built-in Pattern Editor (click "New Pattern") or edit `harness_nav/data/
 49  50  51  52  53  54  55  56
 57  58  59  60  61  62  63  64
 ```
+
+### Modular MCP23017 Mapping
+
+The Raspberry Pi hardware bridge treats the 64 GUI LEDs as logical LED numbers and maps them across one or more MCP23017 expanders.
+
+Default layout:
+- MCP23017 at `0x20` drives LEDs 1-16
+- MCP23017 at `0x21` drives LEDs 17-32
+- MCP23017 at `0x22` drives LEDs 33-48
+- MCP23017 at `0x23` drives LEDs 49-64
+
+To change the wiring, edit [harness_nav/config/mcp23017_layout.json](harness_nav/config/mcp23017_layout.json). Each expander entry contains:
+- `address`: I2C address for the chip
+- `active_high`: output polarity for that expander
+- `outputs`: 16-element list mapping output bit 0-15 to logical LED numbers
+
+This keeps the bridge modular so new expanders can be added without changing the rendering logic.
 
 ---
 
