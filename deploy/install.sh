@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# Installation script for Harness Navigation System on BeagleBone Black
+# Installation script for Harness Navigation System on Raspberry Pi
 #
-# Run this script on the BeagleBone Black after copying files:
+# Run this script on the Raspberry Pi after copying files:
 #   chmod +x install.sh && sudo ./install.sh
 #
 
@@ -19,7 +19,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Define paths
-INSTALL_DIR="/home/debian/HarnessNav"
+INSTALL_DIR="/home/pi/HarnessNav"
 SERVICE_FILE="/etc/systemd/system/harness-nav.service"
 LOG_FILE="/var/log/harness_nav.log"
 
@@ -36,15 +36,15 @@ apt-get update
 apt-get install -y python3-pip python3-pyqt5 python3-yaml
 
 echo "[2/6] Installing Python packages..."
-pip3 install PyYAML Adafruit_BBIO || echo "Note: Adafruit_BBIO may already be installed"
+pip3 install PyYAML || echo "Note: PyYAML may already be installed"
 
 echo "[3/6] Setting permissions..."
 chmod +x "$INSTALL_DIR/harness_nav/scripts/run_hardware.py"
-chown -R debian:debian "$INSTALL_DIR"
+chown -R pi:pi "$INSTALL_DIR"
 
 echo "[4/6] Creating log file..."
 touch "$LOG_FILE"
-chown debian:debian "$LOG_FILE"
+chown pi:pi "$LOG_FILE"
 
 echo "[5/6] Installing systemd service..."
 cp "$INSTALL_DIR/deploy/harness-nav.service" "$SERVICE_FILE"

@@ -68,8 +68,8 @@ python harness_nav/scripts/run_desktop.py
 - Use "1. Lock Wire" and "2. Verify Connection" buttons to simulate hardware
 - Run with: `python harness_nav/scripts/run_desktop.py`
 
-### Hardware Mode (BeagleBone Black)
-- Buttons are hidden; uses actual GPIO inputs
+### Hardware Mode (Raspberry Pi)
+- Buttons are hidden; uses SPI inputs
 - Limit switch detects wire locked in slot
 - Metal plate touch completes circuit for verification
 - Run with: `python harness_nav/scripts/run_hardware.py`
@@ -112,62 +112,65 @@ Use the built-in Pattern Editor (click "New Pattern") or edit `harness_nav/data/
 
 ---
 
-## Hardware Setup (BeagleBone Black)
+## Hardware Setup (Raspberry Pi)
 
 ### Required Components
 
 | Component             | Description                               |
 |-----------------------|-------------------------------------------|
-| BeagleBone Black          | Main controller board                 |
-| 7" Waveshare LCD      | Display for GUI (optional, can use HDMI)  |
+| Raspberry Pi          | Main controller board                 |
+| 10" Waveshare LCD     | Display for GUI (optional, can use HDMI)  |
 | Limit Switch          | Detects when wire is locked in test slot  |
 | Metal Plate           | Touch plate for connectivity verification |
 | Piezo Buzzer          | Audio feedback (PWM driven)               |
-| 8x8 WS2812 LED Matrix | Physical LED display (optional)           |
+| LEDs arranged in 8x8  | Physical LED display (optional)           |
 
 ### Wiring Diagram
 
 ```
-BeagleBone Black
+Raspberry Pi 4B
        │
-       ├── P9_12 (GPIO) ──────┬──── Limit Switch ──── GND
-       │                      │
-       │                   10kΩ pull-up to 3.3V
+       ├── Pin 1 / 2 (3.3V / 5V) ──────── VCC (Pin 24 on TLC5925)
        │
-       ├── P9_14 (GPIO) ──────┬──── Metal Plate ──── GND
-       │                      │
-       │                   10kΩ pull-up to 3.3V
+       ├── Pin 6 / 9 (GND) ───────────── GND (Pin 12 on TLC5925)
        │
-       ├── P9_16 (PWM) ───────┬──── Buzzer (+)
-       │                      │
-       │                  Buzzer (-) ──── GND
+       ├── Pin 19 (GPIO 10 / MOSI) ───── SDI (Pin 23 on TLC5925)
        │
-       └── P8_11 (GPIO) ──────────── WS2812 Data In
-                                     (with level shifter 3.3V→5V)
+       ├── Pin 23 (GPIO 11 / SCLK) ───── CLK (Pin 22 on TLC5925)
+       │
+       ├── Pin 22 (GPIO 25) ──────────── LE (Pin 21 on TLC5925)
+       │
+       └── Pin 16 (GPIO 23) ──────────── \OE (Pin 10 on TLC5925, pulled LOW)
 ```
 
 ### Pin Connections
 
-| Component | BeagleBone Pin | Notes |
-|-----------|----------------|-------|
-| Limit Switch | P9_12 (GPIO_60) | Pull-up to 3.3V, active LOW |
-| Metal Plate | P9_14 (GPIO_50) | Pull-up to 3.3V, active LOW |
-| Buzzer | P9_16 (EHRPWM1B) | PWM output for tone generation |
-| LED Data | P8_11 (GPIO_45) | WS2812 data (needs 5V level shifter) |
+| Raspberry Pi Pin | TLC5925 Pin Name | TLC5925 Pin # | Notes                              |
+|------------------|------------------|---------------|------------------------------------|
+| Pin 1 / 2 (3.3V / 5V) | VCC              | Pin 24        | Logic power supply                |
+| Pin 6 / 9 (GND)       | GND              | Pin 12        | Common ground                     |
+| Pin 19 (GPIO 10 / MOSI)| SDI (Serial Data In) | Pin 23    | Data bus                          |
+| Pin 23 (GPIO 11 / SCLK)| CLK (Clock)     | Pin 22        | Shift clock                       |
+| Pin 22 (GPIO 25)       | LE (Latch Enable) | Pin 21      | Latches data into output          |
+| Pin 16 (GPIO 23)       | \OE (Output Enable) | Pin 10   | Pull LOW (GND) to enable LED outputs |
 
 ### Circuit Notes
 
-1. **Limit Switch**: Connect between P9_12 and GND. The switch should close (connect to GND) when wire is locked.
+1. **Power Supply**: Connect the Raspberry Pi's 3.3V or 5V pin to the TLC5925's VCC (Pin 24). Ensure the voltage matches the logic level of the Raspberry Pi.
 
-2. **Metal Plate**: Connect between P9_14 and GND. When wire touches the plate, it should connect P9_14 to GND through the wire path.
+2. **Ground**: Connect the Raspberry Pi's GND pin to the TLC5925's GND (Pin 12).
 
-3. **Buzzer**: Use a passive piezo buzzer. Connect positive terminal to P9_16 and negative to GND.
+3. **Serial Data Input (SDI)**: Connect GPIO 10 (MOSI, Pin 19) to the TLC5925's SDI (Pin 23).
 
-4. **WS2812 LEDs**: These run on 5V but BeagleBone outputs 3.3V. Use a level shifter (like 74AHCT125) for the data line.
+4. **Clock (CLK)**: Connect GPIO 11 (SCLK, Pin 23) to the TLC5925's CLK (Pin 22).
+
+5. **Latch Enable (LE)**: Connect GPIO 25 (Pin 22) to the TLC5925's LE (Pin 21). This pin latches the shifted data into the output.
+
+6. **Output Enable (\OE)**: Connect GPIO 23 (Pin 16) to the TLC5925's \OE (Pin 10). Pull this pin LOW to enable the LED outputs.
 
 ---
 
-## Deploy to BeagleBone Black
+## Deploy to Raspberry Pi 
 
 ### Option 1: Using Deployment Script (Windows)
 

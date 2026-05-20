@@ -18,4 +18,4 @@ echo "Reloading systemd..."
 systemctl daemon-reload
 
 echo "Uninstall complete."
-echo "Note: Project files at /home/debian/HarnessNav were not removed."
+echo "Note: Project files at /home/pi/HarnessNav were not removed."

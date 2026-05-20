@@ -48,18 +48,20 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 # ============================================================
-# HARDWARE PIN CONFIGURATION - Adjust these for your setup
+# HARDWARE PIN CONFIGURATION - Adjust these for Raspberry Pi
 # ============================================================
-LIMIT_SWITCH_PIN = "P9_12"   # GPIO for limit switch (wire lock)
-METAL_PLATE_PIN = "P9_14"    # GPIO for metal plate (verify)
-BUZZER_PIN = "P9_16"         # PWM for buzzer
-DEBOUNCE_MS = 50             # Debounce time in milliseconds
+LIMIT_SWITCH_PIN = 17   # GPIO for limit switch (wire lock)
+METAL_PLATE_PIN = 27    # GPIO for metal plate (verify)
+BUZZER_PIN = 18         # PWM for buzzer
+DEBOUNCE_MS = 50        # Debounce time in milliseconds
 
 # Buzzer frequencies
-LOCK_FREQ = 1500             # Hz - short beep when wire locked
-LOCK_DURATION = 100          # ms
-VERIFY_FREQ = 2500           # Hz - longer beep when verified
-VERIFY_DURATION = 200        # ms
+LOCK_FREQ = 1500        # Hz - short beep when wire locked
+LOCK_DURATION = 100     # ms
+VERIFY_FREQ = 2500      # Hz - longer beep when verified
+VERIFY_DURATION = 200   # ms
+
+# Note: Ensure the Raspberry Pi GPIO library (e.g., RPi.GPIO or gpiozero) is installed.
 
 
 class HarnessNavApp:
