@@ -107,6 +107,17 @@ class GridWidget(QWidget):
         self._blink_state = True
         self._blinking_enabled = False
 
+        # Callbacks for physical LED synchronisation (TLC5925 or other HAL).
+        # _blink_callback(blink_on: bool)            — fired on every 500ms tick
+        # _led_status_callback(led_num, LEDStatus)   — fired on every status change
+        self._blink_callback = None
+        self._led_status_callback = None
+
+        # Single-shot callback that carries the full pattern + blink phase.
+        # Signature: callback(pattern: Optional[Pattern], blink_on: bool)
+        # Preferred over the pair above — no accumulated state, always correct.
+        self._physical_sync_callback = None
+
         # Blink timer for active LED
         self._blink_timer = QTimer(self)
         self._blink_timer.timeout.connect(self._on_blink_timer)
@@ -142,7 +153,7 @@ class GridWidget(QWidget):
         """Handle blink timer tick."""
         self._blink_state = not self._blink_state
 
-        # Update active LED's blink state
+        # Update active LED's blink state in the GUI.
         if self._pattern and self._pattern.active_led:
             active_led = self._pattern.active_led
             if active_led in self._led_buttons:
@@ -150,11 +161,25 @@ class GridWidget(QWidget):
                 if btn.status == LEDStatus.ACTIVE:
                     btn.set_status(LEDStatus.ACTIVE, self._blink_state)
 
+        # Primary path: push full pattern+blink state in one call (no stale state).
+        if self._physical_sync_callback:
+            self._physical_sync_callback(self._pattern, self._blink_state)
+            return
+
+        # Legacy path: kept for callers that only use the old pair of callbacks.
+        if self._led_status_callback and self._pattern and self._pattern.active_led:
+            self._led_status_callback(self._pattern.active_led, LEDStatus.ACTIVE)
+        if self._blink_callback:
+            self._blink_callback(self._blink_state)
+
     def start_blinking(self) -> None:
         """Start the blinking animation for active LED."""
         self._blinking_enabled = True
         self._blink_state = True
         self._blink_timer.start()
+        # Immediately sync physical LEDs so they don't wait for the first tick.
+        if self._physical_sync_callback:
+            self._physical_sync_callback(self._pattern, self._blink_state)
 
     def stop_blinking(self) -> None:
         """Stop the blinking animation."""
@@ -165,6 +190,9 @@ class GridWidget(QWidget):
             active_led = self._pattern.active_led
             if active_led in self._led_buttons:
                 self._led_buttons[active_led].set_status(LEDStatus.ACTIVE, True)
+        # Sync physical LEDs with blink_on=True (solid active state).
+        if self._physical_sync_callback:
+            self._physical_sync_callback(self._pattern, True)
 
     def set_pattern(self, pattern: Optional[Pattern]) -> None:
         """
@@ -179,17 +207,30 @@ class GridWidget(QWidget):
         for btn in self._led_buttons.values():
             btn.set_status(LEDStatus.OFF)
 
-        # Set pattern LEDs to PENDING
+        # Set pattern LEDs to their current status
         if pattern:
             for led_num in pattern.leds:
                 if led_num in self._led_buttons:
                     status = pattern.get_led_status(led_num)
                     self._led_buttons[led_num].set_status(status)
 
+        # Sync physical LEDs — single call covers both clear and new state.
+        if self._physical_sync_callback:
+            self._physical_sync_callback(self._pattern, self._blink_state)
+        else:
+            if self._led_status_callback:
+                for n in range(1, 17):
+                    self._led_status_callback(n, LEDStatus.OFF)
+            if pattern and self._led_status_callback:
+                for led_num in pattern.leds:
+                    self._led_status_callback(led_num, pattern.get_led_status(led_num))
+
     def update_led_status(self, led_num: int, status: LEDStatus) -> None:
         """Update the status of a specific LED."""
         if led_num in self._led_buttons:
             self._led_buttons[led_num].set_status(status)
+        if self._led_status_callback:
+            self._led_status_callback(led_num, status)
 
     def refresh_display(self) -> None:
         """Refresh the entire display from current pattern data."""
@@ -198,22 +239,66 @@ class GridWidget(QWidget):
             for btn in self._led_buttons.values():
                 btn.set_status(LEDStatus.OFF)
 
-            # Then update pattern LEDs
+            # Then update pattern LEDs.
             for led_num in self._pattern.leds:
                 status = self._pattern.get_led_status(led_num)
                 if led_num in self._led_buttons:
                     self._led_buttons[led_num].set_status(status)
+                if self._led_status_callback:
+                    self._led_status_callback(led_num, status)
+
+        # Sync physical LEDs with full pattern state.
+        if self._physical_sync_callback:
+            self._physical_sync_callback(self._pattern, self._blink_state)
 
     def clear_display(self) -> None:
         """Clear all LEDs to off state."""
         for btn in self._led_buttons.values():
             btn.set_status(LEDStatus.OFF)
         self._pattern = None
+        if self._physical_sync_callback:
+            self._physical_sync_callback(None, self._blink_state)
+        elif self._led_status_callback:
+            for n in range(1, 17):
+                self._led_status_callback(n, LEDStatus.OFF)
 
     def highlight_led(self, led_num: int, status: LEDStatus) -> None:
         """Highlight a specific LED."""
         if led_num in self._led_buttons:
             self._led_buttons[led_num].set_status(status)
+
+    def set_physical_sync_callback(self, callback) -> None:
+        """
+        Register a callback that receives the full pattern + blink state on
+        every GUI update (blink tick, pattern change, status transition).
+
+        Signature: callback(pattern: Optional[Pattern], blink_on: bool)
+
+        This is the preferred integration point for physical LED drivers
+        (e.g. TLC5925).  It carries complete state on every call so the
+        driver never needs to maintain its own accumulator — no stale state.
+        When this callback is set the legacy blink/status callbacks are not
+        fired from _on_blink_timer.
+        """
+        self._physical_sync_callback = callback
+
+    def set_blink_callback(self, callback) -> None:
+        """
+        Register a callback fired on every 500ms blink tick.
+
+        Signature: callback(blink_on: bool)
+        Legacy: prefer set_physical_sync_callback for new integrations.
+        """
+        self._blink_callback = callback
+
+    def set_led_status_callback(self, callback) -> None:
+        """
+        Register a callback fired whenever a LED's status changes.
+
+        Signature: callback(led_num: int, status: LEDStatus)
+        Legacy: prefer set_physical_sync_callback for new integrations.
+        """
+        self._led_status_callback = callback
 
     @property
     def current_pattern(self) -> Optional[Pattern]:

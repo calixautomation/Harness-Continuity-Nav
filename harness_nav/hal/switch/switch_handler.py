@@ -99,7 +99,7 @@ class SwitchHandler(SwitchHandlerBase):
     """
     Real switch handler for BeagleBone Black GPIO.
 
-    Uses Adafruit_BBIO for GPIO access with software debouncing.
+    Uses RPi for GPIO access with software debouncing.
     Falls back to MockSwitchHandler on non-BeagleBone systems.
     """
 
@@ -116,12 +116,12 @@ class SwitchHandler(SwitchHandlerBase):
         self._gpio = None
 
         try:
-            import Adafruit_BBIO.GPIO as GPIO
+            import RPi.GPIO as GPIO
             self._gpio = GPIO
             self._setup_gpio()
             logger.info(f"SwitchHandler initialized on pin {gpio_pin}")
         except ImportError:
-            logger.warning("Adafruit_BBIO not available, using mock")
+            logger.warning("RPi not available, using mock")
             self._use_mock = True
             self._mock = MockSwitchHandler(gpio_pin, debounce_ms)
 
@@ -275,19 +275,20 @@ class MockDualSwitchHandler(DualSwitchHandlerBase):
 
 class DualSwitchHandler(DualSwitchHandlerBase):
     """
-    Real dual switch handler for BeagleBone Black GPIO.
+    Real dual switch handler for Raspberry Pi GPIO.
 
     Monitors two inputs:
-    - Limit switch: Detects when wire is locked in slot
-    - Metal plate: Detects when wire touches plate (verify connectivity)
+    - Limit switch (active LOW, pull-up): wire locked in slot
+    - Metal plate (active LOW, pull-up): wire touches plate (verify)
 
-    Falls back to MockDualSwitchHandler on non-BeagleBone systems.
+    Falls back to MockDualSwitchHandler if RPi.GPIO is unavailable.
+    GPIO mode is not set here — TLC5925Driver sets BCM mode first.
     """
 
     def __init__(
         self,
-        limit_switch_pin: str,
-        metal_plate_pin: str,
+        limit_switch_pin: int,
+        metal_plate_pin: int,
         debounce_ms: int = 50
     ):
         self._limit_switch_pin = limit_switch_pin
@@ -305,23 +306,36 @@ class DualSwitchHandler(DualSwitchHandlerBase):
         self._gpio = None
 
         try:
-            import Adafruit_BBIO.GPIO as GPIO
+            import RPi.GPIO as GPIO
             self._gpio = GPIO
+            # BCM mode already set by TLC5925Driver; calling again is safe.
+            if GPIO.getmode() is None:
+                GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
             self._setup_gpio()
-            logger.info(f"DualSwitchHandler initialized (limit: {limit_switch_pin}, plate: {metal_plate_pin})")
-        except ImportError:
-            logger.warning("Adafruit_BBIO not available, using mock")
+            logger.info(
+                "DualSwitchHandler initialised (limit: GPIO%d, plate: GPIO%d)",
+                limit_switch_pin, metal_plate_pin
+            )
+        except Exception as e:
+            logger.warning("RPi.GPIO unavailable (%s) — switch handler using mock", e)
             self._use_mock = True
             self._mock = MockDualSwitchHandler(limit_switch_pin, metal_plate_pin, debounce_ms)
 
     def _setup_gpio(self) -> None:
-        """Setup GPIO pins for input with pull-up."""
+        """Configure both pins as inputs with internal pull-ups."""
         if self._gpio:
-            self._gpio.setup(self._limit_switch_pin, self._gpio.IN, pull_up_down=self._gpio.PUD_UP)
-            self._gpio.setup(self._metal_plate_pin, self._gpio.IN, pull_up_down=self._gpio.PUD_UP)
+            self._gpio.setup(
+                self._limit_switch_pin, self._gpio.IN,
+                pull_up_down=self._gpio.PUD_UP
+            )
+            self._gpio.setup(
+                self._metal_plate_pin, self._gpio.IN,
+                pull_up_down=self._gpio.PUD_UP
+            )
 
     def start_monitoring(self) -> None:
-        """Start monitoring both switches in a background thread."""
+        """Start polling both switches in a background thread."""
         if self._use_mock and self._mock:
             self._mock.start_monitoring()
             return
@@ -331,12 +345,14 @@ class DualSwitchHandler(DualSwitchHandlerBase):
 
         self._monitoring = True
         self._stop_event.clear()
-        self._monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
+        self._monitor_thread = threading.Thread(
+            target=self._monitor_loop, daemon=True, name="switch-monitor"
+        )
         self._monitor_thread.start()
         logger.info("DualSwitchHandler: monitoring started")
 
     def stop_monitoring(self) -> None:
-        """Stop monitoring both switches."""
+        """Stop the monitoring thread."""
         if self._use_mock and self._mock:
             self._mock.stop_monitoring()
             return
@@ -349,76 +365,71 @@ class DualSwitchHandler(DualSwitchHandlerBase):
         logger.info("DualSwitchHandler: monitoring stopped")
 
     def _monitor_loop(self) -> None:
-        """Background thread loop for monitoring both switch states."""
-        last_lock_state = True  # Pull-up means HIGH when not pressed
-        last_verify_state = True
-        debounce_time = self._debounce_ms / 1000.0
+        """Poll both pins every 10ms; fire callbacks on falling edge (HIGH→LOW)."""
+        last_lock = True    # pull-up → HIGH when not pressed
+        last_verify = True
+        debounce = self._debounce_ms / 1000.0
 
         while not self._stop_event.is_set():
             if self._gpio:
-                # Check limit switch (wire lock)
-                current_lock_state = self._gpio.input(self._limit_switch_pin)
-                if last_lock_state and not current_lock_state:
-                    current_time = time.time()
-                    if current_time - self._last_lock_time > debounce_time:
-                        self._last_lock_time = current_time
+                now = time.monotonic()
+
+                lock = bool(self._gpio.input(self._limit_switch_pin))
+                if last_lock and not lock:
+                    if now - self._last_lock_time > debounce:
+                        self._last_lock_time = now
+                        logger.info("Limit switch pressed — wire locked")
                         if self._lock_callback:
-                            logger.debug("Limit switch pressed (wire locked)")
                             self._lock_callback()
-                last_lock_state = current_lock_state
+                last_lock = lock
 
-                # Check metal plate (verify)
-                current_verify_state = self._gpio.input(self._metal_plate_pin)
-                if last_verify_state and not current_verify_state:
-                    current_time = time.time()
-                    if current_time - self._last_verify_time > debounce_time:
-                        self._last_verify_time = current_time
+                verify = bool(self._gpio.input(self._metal_plate_pin))
+                if last_verify and not verify:
+                    if now - self._last_verify_time > debounce:
+                        self._last_verify_time = now
+                        logger.info("Metal plate contact — verifying")
                         if self._verify_callback:
-                            logger.debug("Metal plate touched (verify)")
                             self._verify_callback()
-                last_verify_state = current_verify_state
+                last_verify = verify
 
-            time.sleep(0.01)  # 10ms polling interval
+            time.sleep(0.01)
 
     def set_lock_callback(self, callback: Callable[[], None]) -> None:
-        """Set callback for limit switch (wire lock) events."""
+        """Set callback fired when the limit switch detects wire is locked."""
         if self._use_mock and self._mock:
             self._mock.set_lock_callback(callback)
             return
         self._lock_callback = callback
 
     def set_verify_callback(self, callback: Callable[[], None]) -> None:
-        """Set callback for metal plate (verify) events."""
+        """Set callback fired when the metal plate detects circuit complete."""
         if self._use_mock and self._mock:
             self._mock.set_verify_callback(callback)
             return
         self._verify_callback = callback
 
     def simulate_lock(self) -> None:
-        """Simulate limit switch press (for testing)."""
+        """Simulate a limit switch press (testing / desktop mode)."""
         if self._use_mock and self._mock:
             self._mock.simulate_lock()
         elif self._lock_callback:
             self._lock_callback()
 
     def simulate_verify(self) -> None:
-        """Simulate metal plate touch (for testing)."""
+        """Simulate a metal plate touch (testing / desktop mode)."""
         if self._use_mock and self._mock:
             self._mock.simulate_verify()
         elif self._verify_callback:
             self._verify_callback()
 
     def simulate_lock_press(self) -> None:
-        """Backward-compatible alias for simulating a lock press."""
+        """Backward-compatible alias."""
         self.simulate_lock()
 
     def simulate_verify_press(self) -> None:
-        """Backward-compatible alias for simulating a verify press."""
+        """Backward-compatible alias."""
         self.simulate_verify()
 
     def cleanup(self) -> None:
-        """Clean up GPIO resources."""
+        """Stop monitoring. GPIO pins are released by TLC5925Driver.cleanup()."""
         self.stop_monitoring()
-        if self._gpio:
-            self._gpio.cleanup(self._limit_switch_pin)
-            self._gpio.cleanup(self._metal_plate_pin)

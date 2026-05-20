@@ -514,6 +514,14 @@ class MainWindow(QMainWindow):
         # Stop blinking animation
         self._grid_widget.stop_blinking()
 
+        # Reset pattern state so physical LEDs are cleared immediately and
+        # no stale active/locked state persists if the same pattern is
+        # restarted or a new one selected.
+        if self._current_pattern:
+            self._current_pattern.reset()
+            self._grid_widget.refresh_display()
+            self._update_progress(0, len(self._current_pattern.leds))
+
         self._status_bar.showMessage("Test stopped")
         self.test_stopped.emit()
 

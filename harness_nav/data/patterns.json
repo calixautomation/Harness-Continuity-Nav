@@ -1,16 +1,6 @@
 {
     "patterns": [
         {
-            "id": "pattern_1",
-            "name": "Pattern 1",
-            "description": "LEDs 3, 4, 8",
-            "leds": [
-                10,
-                11,
-                13
-            ]
-        },
-        {
             "id": "pattern_4",
             "name": "Pattern 4",
             "description": "Corner LEDs",
@@ -49,6 +39,33 @@
                 6,
                 7,
                 8
+            ]
+        },
+        {
+            "id": "my_patterns",
+            "name": "My Patterns",
+            "description": "LEDs 1, 2, 16",
+            "leds": [
+                1,
+                2,
+                16
+            ]
+        },
+        {
+            "id": "check",
+            "name": "check",
+            "description": "LEDs 1, 16",
+            "leds": [
+                1,
+                16
+            ]
+        },
+        {
+            "id": "16",
+            "name": "16",
+            "description": "LEDs 16",
+            "leds": [
+                16
             ]
         }
     ]
