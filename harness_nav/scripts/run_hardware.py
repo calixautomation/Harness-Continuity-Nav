@@ -64,14 +64,15 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # HARDWARE PIN CONFIGURATION - Raspberry Pi 4B (BCM numbering)
 # ============================================================
-LIMIT_SWITCH_PIN = 17   # GPIO for limit switch (wire lock) -> physical pin 11
-METAL_PLATE_PIN = 27    # GPIO for metal plate (verify) -> physical pin 13
+LIMIT_SWITCH_PIN = 23   # GPIO for limit switch (wire lock) -> physical pin 16
+METAL_PLATE_PIN = 24    # GPIO for metal plate (verify) -> physical pin 18
 BUZZER_PIN = 18         # PWM for buzzer -> physical pin 12
 
 # TLC5925 bitbang pins (SPI peripheral leaves GPIO10/11 at 0V on this board)
 TLC5925_SDI = 10        # BCM 10 → physical pin 19 → TLC5925 pin 2 (SDI)
 TLC5925_CLK = 11        # BCM 11 → physical pin 23 → TLC5925 pin 3 (CLK)
-TLC5925_LE  = 23        # BCM 23 → physical pin 16 → TLC5925 pin 4 (LE)
+TLC5925_LE  = 25        # BCM 25 → physical pin 22 → TLC5925 pin 4 (LE)
+TLC5925_OE  = 7         # NEW line -> physical pin 26 (/OE, active LOW)
 
 DEBOUNCE_MS = 50        # Debounce time in milliseconds
 
@@ -112,7 +113,7 @@ class HarnessNavApp:
     def _signal_handler(self, signum, _frame):
         """Handle shutdown signals."""
         logger.info(f"Received signal {signum}, shutting down...")
-        self.cleanup()
+        #self.cleanup()
         self.app.quit()
 
     def setup(self):
@@ -138,6 +139,7 @@ class HarnessNavApp:
             sdi=TLC5925_SDI,
             clk=TLC5925_CLK,
             le=TLC5925_LE,
+            oe=TLC5925_OE,          # NEW line
         )
 
         # Wire TLC5925 into GridWidget via the single sync callback.
@@ -217,14 +219,16 @@ class HarnessNavApp:
         return self.app.exec_()
 
     def cleanup(self):
-        """Clean up resources."""
+        if getattr(self, "_cleaned", False):
+            return
+        self._cleaned = True
         logger.info("Cleaning up...")
-        if self.tlc5925:
-            self.tlc5925.cleanup()
         if self.switch:
             self.switch.cleanup()
         if self.buzzer:
             self.buzzer.cleanup()
+        if self.tlc5925:
+            self.tlc5925.cleanup()
         logger.info("Cleanup complete")
 
 
